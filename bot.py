@@ -98,7 +98,7 @@ def get_schedule_for_day(day):
 
     if day in schedule:
         lessons = "\n".join([f"{time} - {link}" for time, link in schedule[day].items()])
-        return f"📅 Розклад на {day}:\n{lessons}"
+        return f"📅 Розклад на {day} ({week}-й тиждень):\n{lessons}"
     return f"❌ Немає розкладу на цей день"
 
 # 📌 Обробник команди /now (що зараз?)
