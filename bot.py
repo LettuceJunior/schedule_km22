@@ -1,7 +1,7 @@
 import telebot
 import time
 import datetime
-
+import threading
 
 bot = telebot.TeleBot('6508806550:AAFG0dq4AntPx7_l8kIBzRen4yMKjyCA2K0')
 
@@ -74,12 +74,7 @@ week2 = {
     }
 }
 
-@bot.message_handler(func=lambda message: True)  # Обробляє всі повідомлення
-def get_chat_id(message):
-    chat_id = message.chat.id
-    bot.send_message(chat_id, f"ID цієї групи: {chat_id}")
-    print(f"Group ID: {chat_id}")  # Виводимо в консоль
-    
+
 def get_week_type():
     week_number = datetime.datetime.now().isocalendar()[1]  
     return 2 if week_number % 2 != 0 else 1
@@ -108,6 +103,46 @@ def get_schedule_for_day(day):
         return f"📅 Розклад на {day} ({week}-й тиждень):\n{lessons}"
     return f"❌ Немає розкладу на цей день"
 
+pinned_messages = {}
+
+# 📌 Функція, яка надсилає та закріплює повідомлення з посиланням
+def send_and_pin_lesson(chat_id, lesson_link):
+    global pinned_messages
+    
+    message = bot.send_message(chat_id, lesson_link)  # Відправляємо повідомлення
+    bot.pin_chat_message(chat_id, message.message_id)  # Закріплюємо його
+    
+    pinned_messages[chat_id] = message.message_id  # Зберігаємо ID
+
+    # ⏳ Запускаємо таймер для відкріплення через 1 год 40 хв (6000 сек)
+    threading.Timer(6000, unpin_message, args=[chat_id]).start()
+
+# 📌 Функція відкріплення повідомлення
+def unpin_message(chat_id):
+    global pinned_messages
+
+    if chat_id in pinned_messages:
+        try:
+            bot.unpin_chat_message(chat_id, pinned_messages[chat_id])
+            del pinned_messages[chat_id]  # Видаляємо ID після відкріплення
+        except Exception as e:
+            print(f"⚠️ Помилка при відкрипленні: {e}")
+
+# 📌 Функція перевірки часу і запуску надсилання
+def check_schedule():
+    while True:
+        if day in schedule:
+            for lesson_time, lesson_link in schedule[day].items():
+                if time == lesson_time:  # Якщо час співпадає
+                    send_and_pin_lesson(CHAT_ID, f"🔔 Час пари!\n{lesson_link}")
+
+        time.sleep(60)  # Перевіряємо час кожну хвилину
+
+# 📌 Запускаємо перевірку часу у фоновому потоці
+thread = threading.Thread(target=check_schedule)
+thread.daemon = True  # Потік завершується разом із головною програмою
+thread.start()
+
 # 📌 Обробник команди /now (що зараз?)
 @bot.message_handler(commands=['now'])
 def now_handler(message):
@@ -133,7 +168,6 @@ def day_handler(message):
         bot.send_message(message.chat.id, get_schedule_for_day(day))
     else:
         bot.send_message(message.chat.id, "❓ Введи день: /day Monday")
-
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
