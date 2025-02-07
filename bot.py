@@ -4,6 +4,7 @@ import datetime
 import threading
 
 bot = telebot.TeleBot('6508806550:AAFG0dq4AntPx7_l8kIBzRen4yMKjyCA2K0')
+CHAT_ID = '-1001535245484'
 
 commands = [
     telebot.types.BotCommand("start", "запустити бота"),
