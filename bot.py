@@ -22,6 +22,7 @@ commands = [
     telebot.types.BotCommand("rmf", "рівняння мат. фіз."),
     telebot.types.BotCommand("now", "яка пара зараз"),
     telebot.types.BotCommand("tomorrow", "розклад на завтра"),
+    telebot.types.BotCommand("today", "розклад на сьогодні")
     telebot.types.BotCommand("day", "розклад на потрібний день")
 ]
 
@@ -197,6 +198,7 @@ def help_handler(message):
                      "/frontend - Front-end\n"
                      "/rmf - рівняння мат. фіз.\n"
                      "/now - яка пара зараз\n"
+                     "/today - розклад на сьогодні\n"
                      "/tomorrow - розклад на завтра\n"
                      "Або напиши <b><i>/day_день-тижня</i></b> (тіпа '/day Monday') і я кину розклад. Все просто 💁", parse_mode="HTML")
 
