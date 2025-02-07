@@ -151,6 +151,12 @@ def now_handler(message):
 
 bot.set_my_commands(commands)
 
+# 📌 Обробник команди /today (розклад на сьогодні)
+@bot.message_handler(commands=['today'])
+def today_handler(message):
+    today = datetime.datetime.now().strftime("%A")  # Поточний день
+    bot.send_message(message.chat.id, get_schedule_for_day(today))
+
 # 📌 Обробник команди /tomorrow (розклад на завтра)
 @bot.message_handler(commands=['tomorrow'])
 def tomorrow_handler(message):
