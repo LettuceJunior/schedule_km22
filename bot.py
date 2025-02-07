@@ -1,8 +1,10 @@
 import telebot
 import time
+import datetime
+
+
 bot = telebot.TeleBot('6508806550:AAFG0dq4AntPx7_l8kIBzRen4yMKjyCA2K0')
 
-# Додаємо список команд
 commands = [
     telebot.types.BotCommand("start", "запустити бота"),
     telebot.types.BotCommand("help", "а шо дєлать"),
@@ -17,10 +19,114 @@ commands = [
     telebot.types.BotCommand("mo", "методи оптимізації"),
     telebot.types.BotCommand("frontend", "Front-end"),
     telebot.types.BotCommand("rmf", "рівняння мат. фіз."),
+    telebot.types.BotCommand("now", "яка пара зараз"),
+    telebot.types.BotCommand("tomorrow", "розклад на завтра"),
+    telebot.types.BotCommand("day", "розклад на потрібний день")
 ]
 
-# Встановлюємо команди перед запуском бота
+week1 = {
+    "Monday": {
+        "08:30": "Методи оптимізації",
+        "10:25": "Бази даних",
+        "12:20": "Основи машинного навчання"
+    },
+    "Tuesday": {
+        "08:30": "БЖД та цивільний захист",
+        "10:25": "Практичний курс іноземної мови професійного спрямування.",
+        "12:20": "Front-end розробка",
+        "14:15": "Інформаційна безпека"
+    },
+    "Wednesday": {
+        "08:30": "Front-end розробка",
+        "10:25": "Аналіз даних",
+        "12:20": "Рівняння математичної фізики",
+        "14:15":""
+    },
+    "Thursday": {
+        "08:30": "Основи машинного навчання",
+        "12:20": "БЖД та цивільний захист"
+    }
+}
+
+week2 = {
+    "Monday": {
+        "08:30": "Методи оптимізації",
+        "10:25": "Бази даних",
+        "12:20": "Інформаційна безпека",
+        "14:15": "Методи оптимізації"
+    },
+    "Tuesday": {
+        "10:25": "Практичний курс іноземної мови професійного спрямування.",
+        "12:20": "Front-end розробка",
+        "14:15": "Аналіз даних"
+    },
+    "Wednesday": {
+        "08:30": "Front-end розробка",
+        "10:25": "Аналіз даних",
+        "12:20": "Рівняння математичної фізики",
+        "14:15": "Рівняння математичної фізики"
+    },
+    "Friday": {
+        "08:30": "Основи машинного навчання",
+        "14:15": "Бази даних"
+    }
+}
+
+
+def get_week_type():
+    week_number = datetime.datetime.now().isocalendar()[1]  
+    return 2 if week_number % 2 != 0 else 1
+
+now = datetime.datetime.now()
+day = now.strftime("%A")  # День тижня англійською
+time = now.strftime("%H:%M")  # Поточний час
+week = get_week_type()  # Визначаємо тиждень
+schedule = week1 if week == 1 else week2  # Вибираємо розклад
+end_time = "15:55"
+
+def get_current_lesson():
+    
+    if day in schedule:
+        for lesson_time, lesson_link in schedule[day].items():
+            if lesson_time <= time < end_time :  # Якщо вже час для заняття
+                return f"🔔 Зараз: {lesson_link}"
+    return f"📅 Зараз немає занять"
+
+def get_schedule_for_day(day):
+    week_type = get_week_type()  # Визначаємо тиждень
+    schedule = week1 if week_type == 1 else week2  # Вибираємо розклад
+
+    if day in schedule:
+        lessons = "\n".join([f"{time} - {link}" for time, link in schedule[day].items()])
+        return f"📅 Розклад на сьогодні:\n{lessons}"
+    return f"❌ Немає розкладу на цей день"
+
+# 📌 Обробник команди /now (що зараз?)
+@bot.message_handler(commands=['now'])
+def now_handler(message):
+    bot.send_message(message.chat.id, get_current_lesson())
+
 bot.set_my_commands(commands)
+
+# 📌 Обробник команди /tomorrow (розклад на завтра)
+@bot.message_handler(commands=['tomorrow'])
+def tomorrow_handler(message):
+    today = datetime.datetime.now().strftime("%A")  # Поточний день
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    tomorrow_index = (days.index(today) + 1) % 7  # Наступний день
+
+    bot.send_message(message.chat.id, get_schedule_for_day(days[tomorrow_index]))
+
+# 📌 Обробник команди /day (розклад на будь-який день)
+@bot.message_handler(commands=['day'])
+def day_handler(message):
+    text = message.text.split()
+    if len(text) > 1:
+        day = text[1].capitalize()  # Приводимо до формату (Monday, Tuesday)
+        bot.send_message(message.chat.id, get_schedule_for_day(day))
+    else:
+        bot.send_message(message.chat.id, "❓ Введи день: /day Monday")
+
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
@@ -30,7 +136,19 @@ def start_handler(message):
 def help_handler(message):
     bot.send_message(message.chat.id, "Шо тобі курва помогти? \nЯк дурне сі вродило, то вже й Господь не поможе 🤷")
     time.sleep(3)
-    bot.send_message(message.chat.id, "Та ладно, шуткую. \nПросто напиши предмет і я кину посилання. Або напиши день тижня і я кину розклад. Все просто 💁")
+    bot.send_message(message.chat.id, "Та ладно, шуткую. \nНапиши <b><i>/предмет</i></b> і я кину посилання: \n" 
+                     "/lec - лекційне посилання\n"
+                     "/ml - машинне навчання\n"
+                     "/bzhd - БЖД\n"
+                     "/bzhd_lec - БЖД лекції\n"
+                     "/bd - бази даних\n"
+                     "/ad - аналіз даних\n"
+                     "/ib - інф. безпека\n"
+                     "/eng - англійська\n"
+                     "/mo - методи оптимізації\n"
+                     "/frontend - Front-end\n"
+                     "/rmf - рівняння мат. фіз.\n"
+                     "Або напиши <b><i>/день_тижня</i></b> і я кину розклад. Все просто 💁", parse_mode="HTML")
 
 @bot.message_handler(commands=['lec', 'лекція'])
 def start_handler(message):
