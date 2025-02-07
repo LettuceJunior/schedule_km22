@@ -22,7 +22,7 @@ commands = [
     telebot.types.BotCommand("rmf", "рівняння мат. фіз."),
     telebot.types.BotCommand("now", "яка пара зараз"),
     telebot.types.BotCommand("tomorrow", "розклад на завтра"),
-    telebot.types.BotCommand("today", "розклад на сьогодні")
+    telebot.types.BotCommand("today", "розклад на сьогодні"),
     telebot.types.BotCommand("day", "розклад на потрібний день")
 ]
 
