@@ -90,16 +90,22 @@ timezone = pytz.timezone("Europe/Kyiv")  # Встановлюємо київсь
 
 def get_current_lesson():
     now = datetime.datetime.now(timezone)
-    day = now.strftime("%A")  # Оновлюємо день
-    current_time = now.strftime("%H:%M")  # Оновлюємо час
-    week = get_week_type()  # Визначаємо тиждень
-    schedule = week1 if week == 1 else week2  # Вибираємо розклад
+    print("Поточний час:", now.strftime("%H:%M"))  # Для перевірки часу
+    day = now.strftime("%A")
+    current_time = now.strftime("%H:%M")
+    week = get_week_type()
+    schedule = week1 if week == 1 else week2
     
     if day in schedule:
-        for lesson_time, lesson_link in schedule[day].items():
-            if lesson_time <= current_time:  # Перевіряємо, чи урок вже почався
-                return f"🔔 Зараз: {lesson_link}"
-    return f"📅 Зараз немає занять"
+        # Перевіряємо кожну пару на наявність уроку
+        for lesson_time in sorted(schedule[day].keys()):  # Сортуємо години
+            if lesson_time > current_time:  # Якщо урок почнеться пізніше, виходимо
+                break
+            lesson_link = schedule[day][lesson_time]
+            if lesson_link:  # Якщо урок існує
+                current_lesson = f"🔔 Зараз: {lesson_link}"
+                
+    return current_lesson if 'current_lesson' in locals() else "📅 Зараз немає занять"
 
 
 def get_schedule_for_day(day):
