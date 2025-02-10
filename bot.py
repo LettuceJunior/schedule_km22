@@ -1,4 +1,4 @@
-import telebot
+ import telebot
 import time
 import datetime
 import threading
@@ -112,7 +112,6 @@ def get_schedule_for_day(day):
     week_type = get_week_type()  # Визначаємо тиждень
     schedule = week1 if week_type == 1 else week2  # Вибираємо розклад
     now = datetime.datetime.now(timezone)
-    day = now.strftime("%A")  # Оновлюємо день
     current_time = now.strftime("%H:%M")  # Оновлюємо час
 
     if day in schedule:
