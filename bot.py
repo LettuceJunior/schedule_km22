@@ -92,17 +92,23 @@ def get_current_lesson():
     week = get_week_type()  # Визначаємо тиждень
     schedule = week1 if week == 1 else week2  # Вибираємо розклад
 
-    lesson_times = sorted(schedule.get(day, {}).keys())  # Отримуємо відсортовані години пар
+    # Розклад пар за часом
+    lessons_timetable = [
+        ("08:30", "10:10"),
+        ("10:25", "12:05"),
+        ("12:20", "14:00"),
+        ("14:15", "15:55")
+    ]
 
-    for i in range(len(lesson_times)):
-        start_time = lesson_times[i]  # Початок пари
-        end_time = lesson_times[i + 1] if i + 1 < len(lesson_times) else "15:55"  # Кінець поточної пари
+    if day not in schedule:
+        return "📅 Сьогодні пар немає"
 
-        if start_time <= current_time < end_time:
-            return f"🔔 Зараз: {schedule[day][start_time]}"
+    for i, (start, end) in enumerate(lessons_timetable):
+        if start <= current_time <= end:
+            lesson = schedule[day].get(start, "❌ Пара є, але не вказана в розкладі")
+            return f"🔔 Зараз {i+1}-а пара: {lesson}"
 
     return "📅 Зараз немає занять"
-
 
 
 def get_schedule_for_day(day):
