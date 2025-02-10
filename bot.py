@@ -76,23 +76,21 @@ week2 = {
     }
 }
 
-START_WEEK_NUMBER = 5
+START_WEEK_NUMBER = 6
 
 def get_week_type():
     week_number = datetime.datetime.now().isocalendar()[1]  
     return 1 if (week_number - START_WEEK_NUMBER) % 2 == 0 else 2
 
-now = datetime.datetime.now()
-day = now.strftime("%A")  # День тижня англійською
-time = now.strftime("%H:%M")  # Поточний час
-week = get_week_type()  # Визначаємо тиждень
-schedule = week1 if week == 1 else week2  # Вибираємо розклад
+
 end_time = "15:55"
 
 def get_current_lesson():
     now = datetime.datetime.now()
     day = now.strftime("%A")  # Оновлюємо день
     current_time = now.strftime("%H:%M")  # Оновлюємо час
+    week = get_week_type()  # Визначаємо тиждень
+    schedule = week1 if week == 1 else week2  # Вибираємо розклад
     
     if day in schedule:
         for lesson_time, lesson_link in schedule[day].items():
@@ -104,10 +102,13 @@ def get_current_lesson():
 def get_schedule_for_day(day):
     week_type = get_week_type()  # Визначаємо тиждень
     schedule = week1 if week_type == 1 else week2  # Вибираємо розклад
+    now = datetime.datetime.now()
+    day = now.strftime("%A")  # Оновлюємо день
+    current_time = now.strftime("%H:%M")  # Оновлюємо час
 
     if day in schedule:
-        lessons = "\n".join([f"{time} - {link}" for time, link in schedule[day].items()])
-        return f"📅 Розклад на {day} ({week}-й тиждень):\n{lessons}"
+        lessons = "\n".join([f"{current_time} - {link}" for current_time, link in schedule[day].items()])
+        return f"📅 Розклад на {day} ({week_type}-й тиждень):\n{lessons}"
     return f"❌ Немає розкладу на цей день"
 
 pinned_messages = {}
@@ -141,6 +142,8 @@ def check_schedule():
         now = datetime.datetime.now()
         day = now.strftime("%A")
         current_time = now.strftime("%H:%M")
+        week_type = get_week_type()  # Визначаємо тиждень
+        schedule = week1 if week_type == 1 else week2  # Вибираємо розклад
         
         if day in schedule and current_time in schedule[day]:
             lesson_link = schedule[day][current_time]
