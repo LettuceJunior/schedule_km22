@@ -4,7 +4,7 @@ import datetime
 import threading
 import pytz
 
-bot = telebot.TeleBot('6508806550:AAFG0dq4AntPx7_l8kIBzRen4yMKjyCA2K0')
+#bot = telebot.TeleBot('6508806550:AAFG0dq4AntPx7_l8kIBzRen4yMKjyCA2K0')
 CHAT_ID = '-1001535245484'
 
 commands = [
@@ -257,7 +257,7 @@ def start_handler(message):
 
 @bot.message_handler(commands=['mo', 'мо'])
 def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Методи оптимізації</b> \n\nНема ще. \nВ тебе є? Ділись (скажи @lettucejunior)", parse_mode="HTML") 
+    bot.send_message(message.chat.id, "<b>Методи оптимізації</b> \n\nhttps://us02web.zoom.us/j/9189174549?pwd=bTNWY1BnVkFLRFViTXVjbUUwTVFUQT09", parse_mode="HTML") 
 
 @bot.message_handler(commands=['frontend', 'фронтенд'])
 def start_handler(message):
