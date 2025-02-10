@@ -2,6 +2,7 @@ import telebot
 import time
 import datetime
 import threading
+import pytz
 
 bot = telebot.TeleBot('6508806550:AAFG0dq4AntPx7_l8kIBzRen4yMKjyCA2K0')
 CHAT_ID = '-1001535245484'
@@ -79,42 +80,32 @@ week2 = {
 START_WEEK_NUMBER = 6
 
 def get_week_type():
-    week_number = datetime.datetime.now().isocalendar()[1]  
+    week_number = datetime.datetime.now(timezone).isocalendar()[1]  
     return 1 if (week_number - START_WEEK_NUMBER) % 2 == 0 else 2
-
 
 end_time = "15:55"
 
+timezone = pytz.timezone("Europe/Kyiv")  # Встановлюємо київський час
+
+
 def get_current_lesson():
-    now = datetime.datetime.now()
-    day = now.strftime("%A")  # Поточний день
-    current_time = now.strftime("%H:%M")  # Поточний час
+    now = datetime.datetime.now(timezone)
+    day = now.strftime("%A")  # Оновлюємо день
+    current_time = now.strftime("%H:%M")  # Оновлюємо час
     week = get_week_type()  # Визначаємо тиждень
     schedule = week1 if week == 1 else week2  # Вибираємо розклад
-
-    # Розклад пар за часом
-    lessons_timetable = [
-        ("08:30", "10:10"),
-        ("10:25", "12:05"),
-        ("12:20", "14:00"),
-        ("14:15", "15:55")
-    ]
-
-    if day not in schedule:
-        return "📅 Сьогодні пар немає"
-
-    for i, (start, end) in enumerate(lessons_timetable):
-        if start <= current_time <= end:
-            lesson = schedule[day].get(start, "❌ Пара є, але не вказана в розкладі")
-            return f"🔔 Зараз {i+1}-а пара: {lesson}"
-
-    return "📅 Зараз немає занять"
+    
+    if day in schedule:
+        for lesson_time, lesson_link in schedule[day].items():
+            if lesson_time <= current_time:  # Перевіряємо, чи урок вже почався
+                return f"🔔 Зараз: {lesson_link}"
+    return f"📅 Зараз немає занять"
 
 
 def get_schedule_for_day(day):
     week_type = get_week_type()  # Визначаємо тиждень
     schedule = week1 if week_type == 1 else week2  # Вибираємо розклад
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(timezone)
     day = now.strftime("%A")  # Оновлюємо день
     current_time = now.strftime("%H:%M")  # Оновлюємо час
 
@@ -151,7 +142,7 @@ def unpin_message(chat_id):
 # 📌 Функція перевірки часу і запуску надсилання
 def check_schedule():
     while True:
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(timezone)
         day = now.strftime("%A")
         current_time = now.strftime("%H:%M")
         week_type = get_week_type()  # Визначаємо тиждень
@@ -178,13 +169,13 @@ bot.set_my_commands(commands)
 # 📌 Обробник команди /today (розклад на сьогодні)
 @bot.message_handler(commands=['today'])
 def today_handler(message):
-    today = datetime.datetime.now().strftime("%A")  # Поточний день
+    today = datetime.datetime.now(timezone).strftime("%A")  # Поточний день
     bot.send_message(message.chat.id, get_schedule_for_day(today))
 
 # 📌 Обробник команди /tomorrow (розклад на завтра)
 @bot.message_handler(commands=['tomorrow'])
 def tomorrow_handler(message):
-    today = datetime.datetime.now().strftime("%A")  # Поточний день
+    today = datetime.datetime.now(timezone).strftime("%A")  # Поточний день
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     tomorrow_index = (days.index(today) + 1) % 7  # Наступний день
 
@@ -270,6 +261,5 @@ def start_handler(message):
 @bot.message_handler(commands=['rmf', 'рмф'])
 def start_handler(message):
     bot.send_message(message.chat.id, "<b>Рівняння мат. фізики</b> \n\nНема ще. \nВ тебе є? Ділись (скажи @lettucejunior)", parse_mode="HTML") 
-
 
 bot.infinity_polling()
