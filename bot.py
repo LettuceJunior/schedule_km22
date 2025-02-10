@@ -87,16 +87,22 @@ end_time = "15:55"
 
 def get_current_lesson():
     now = datetime.datetime.now()
-    day = now.strftime("%A")  # Оновлюємо день
-    current_time = now.strftime("%H:%M")  # Оновлюємо час
+    day = now.strftime("%A")  # Поточний день
+    current_time = now.strftime("%H:%M")  # Поточний час
     week = get_week_type()  # Визначаємо тиждень
     schedule = week1 if week == 1 else week2  # Вибираємо розклад
-    
-    if day in schedule:
-        for lesson_time, lesson_link in schedule[day].items():
-            if lesson_time <= current_time:  # Перевіряємо, чи урок вже почався
-                return f"🔔 Зараз: {lesson_link}"
-    return f"📅 Зараз немає занять"
+
+    lesson_times = sorted(schedule.get(day, {}).keys())  # Отримуємо відсортовані години пар
+
+    for i in range(len(lesson_times)):
+        start_time = lesson_times[i]  # Початок пари
+        end_time = lesson_times[i + 1] if i + 1 < len(lesson_times) else "15:55"  # Кінець поточної пари
+
+        if start_time <= current_time < end_time:
+            return f"🔔 Зараз: {schedule[day][start_time]}"
+
+    return "📅 Зараз немає занять"
+
 
 
 def get_schedule_for_day(day):
