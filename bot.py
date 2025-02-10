@@ -76,10 +76,11 @@ week2 = {
     }
 }
 
+START_WEEK_NUMBER = 5
 
 def get_week_type():
     week_number = datetime.datetime.now().isocalendar()[1]  
-    return 2 if week_number % 2 != 0 else 1
+    return 1 if (week_number - START_WEEK_NUMBER) % 2 == 0 else 2
 
 now = datetime.datetime.now()
 day = now.strftime("%A")  # День тижня англійською
@@ -89,12 +90,16 @@ schedule = week1 if week == 1 else week2  # Вибираємо розклад
 end_time = "15:55"
 
 def get_current_lesson():
+    now = datetime.datetime.now()
+    day = now.strftime("%A")  # Оновлюємо день
+    current_time = now.strftime("%H:%M")  # Оновлюємо час
     
     if day in schedule:
         for lesson_time, lesson_link in schedule[day].items():
-            if lesson_time <= time < end_time :  # Якщо вже час для заняття
+            if lesson_time <= current_time:  # Перевіряємо, чи урок вже почався
                 return f"🔔 Зараз: {lesson_link}"
     return f"📅 Зараз немає занять"
+
 
 def get_schedule_for_day(day):
     week_type = get_week_type()  # Визначаємо тиждень
@@ -133,12 +138,15 @@ def unpin_message(chat_id):
 # 📌 Функція перевірки часу і запуску надсилання
 def check_schedule():
     while True:
-        if day in schedule:
-            for lesson_time, lesson_link in schedule[day].items():
-                if time == lesson_time:  # Якщо час співпадає
-                    send_and_pin_lesson(CHAT_ID, f"🔔 Час пари!\n{lesson_link}")
+        now = datetime.datetime.now()
+        day = now.strftime("%A")
+        current_time = now.strftime("%H:%M")
+        
+        if day in schedule and current_time in schedule[day]:
+            lesson_link = schedule[day][current_time]
+            send_and_pin_lesson(CHAT_ID, f"🔔 Час пари!\n{lesson_link}")
 
-        time.sleep(60)  # Перевіряємо час кожну хвилину
+        time.sleep(30)  # Перевіряємо кожні 30 секунд
 
 # 📌 Запускаємо перевірку часу у фоновому потоці
 thread = threading.Thread(target=check_schedule)
