@@ -4,7 +4,7 @@ import datetime
 import threading
 import pytz
 
-#bot = telebot.TeleBot('6508806550:AAFG0dq4AntPx7_l8kIBzRen4yMKjyCA2K0')
+bot = telebot.TeleBot('7651652796:AAEv7jL6Fi9eBUi81RJhknZiPize-9tXV1k')
 CHAT_ID = '-1001535245484'
 
 commands = [
