@@ -117,7 +117,6 @@ def get_schedule_for_day(day):
         return f"📅 Розклад на {day} ({week_type}-й тиждень):\n{lessons}"
     return f"❌ Немає розкладу на цей день"
 
-pinned_messages = {}
 
 # 📌 Обробник команди /now (що зараз?)
 @bot.message_handler(commands=['now'])
@@ -138,7 +137,6 @@ def tomorrow_handler(message):
     today = datetime.datetime.now(timezone).strftime("%A")  # Поточний день
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     tomorrow_index = (days.index(today) + 1) % 7  # Наступний день
-
     bot.send_message(message.chat.id, get_schedule_for_day(days[tomorrow_index]))
 
 # 📌 Обробник команди /day (розклад на будь-який день)
