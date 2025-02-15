@@ -4,7 +4,7 @@ import datetime
 import threading
 import pytz
 
-bot = telebot.TeleBot('7651652796:AAEv7jL6Fi9eBUi81RJhknZiPize-9tXV1k')
+bot = telebot.TeleBot('6508806550:AAFG0dq4AntPx7_l8kIBzRen4yMKjyCA2K0')
 CHAT_ID = '-1001535245484'
 
 commands = [
@@ -95,17 +95,15 @@ def get_current_lesson():
     current_time = now.strftime("%H:%M")
     week = get_week_type()
     schedule = week1 if week == 1 else week2
-    
+
     if day in schedule:
-        # Перевіряємо кожну пару на наявність уроку
-        for lesson_time in sorted(schedule[day].keys()):  # Сортуємо години
-            if lesson_time > current_time:  # Якщо урок почнеться пізніше, виходимо
-                break
-            lesson_link = schedule[day][lesson_time]
-            if lesson_link:  # Якщо урок існує
-                current_lesson = f"🔔 Зараз: {lesson_link}"
-                
-    return current_lesson if 'current_lesson' in locals() else "📅 Зараз немає занять"
+        for lesson_time in sorted(schedule[day].keys()):
+            end_lesson_time = (datetime.datetime.strptime(lesson_time, "%H:%M") + datetime.timedelta(minutes=95)).strftime("%H:%M")
+
+            if lesson_time <= current_time < end_lesson_time:
+                return f"🔔 Зараз: {schedule[day][lesson_time]} ({lesson_time} - {end_lesson_time})"
+    
+    return "📅 Зараз немає занять"
 
 
 def get_schedule_for_day(day):
@@ -120,49 +118,6 @@ def get_schedule_for_day(day):
     return f"❌ Немає розкладу на цей день"
 
 pinned_messages = {}
-
-# 📌 Функція, яка надсилає та закріплює повідомлення з посиланням
-def send_and_pin_lesson(chat_id, lesson_link):
-    global pinned_messages
-    
-    message = bot.send_message(chat_id, lesson_link)  # Відправляємо повідомлення
-    bot.pin_chat_message(chat_id, message.message_id)  # Закріплюємо його
-    
-    pinned_messages[chat_id] = message.message_id  # Зберігаємо ID
-
-    # ⏳ Запускаємо таймер для відкріплення через 1 год 40 хв (6000 сек)
-    threading.Timer(6000, unpin_message, args=[chat_id]).start()
-
-# 📌 Функція відкріплення повідомлення
-def unpin_message(chat_id):
-    global pinned_messages
-
-    if chat_id in pinned_messages:
-        try:
-            bot.unpin_chat_message(chat_id, pinned_messages[chat_id])
-            del pinned_messages[chat_id]  # Видаляємо ID після відкріплення
-        except Exception as e:
-            print(f"⚠️ Помилка при відкрипленні: {e}")
-
-# 📌 Функція перевірки часу і запуску надсилання
-def check_schedule():
-    while True:
-        now = datetime.datetime.now(timezone)
-        day = now.strftime("%A")
-        current_time = now.strftime("%H:%M")
-        week_type = get_week_type()  # Визначаємо тиждень
-        schedule = week1 if week_type == 1 else week2  # Вибираємо розклад
-        
-        if day in schedule and current_time in schedule[day]:
-            lesson_link = schedule[day][current_time]
-            send_and_pin_lesson(CHAT_ID, f"🔔 Час пари!\n{lesson_link}")
-
-        time.sleep(30)  # Перевіряємо кожні 30 секунд
-
-# 📌 Запускаємо перевірку часу у фоновому потоці
-thread = threading.Thread(target=check_schedule)
-thread.daemon = True  # Потік завершується разом із головною програмою
-thread.start()
 
 # 📌 Обробник команди /now (що зараз?)
 @bot.message_handler(commands=['now'])
