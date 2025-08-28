@@ -1,225 +1,370 @@
-import telebot
-import time
-import datetime
-import threading
-import pytz
+import requests, datetime, pytz, telebot, json
+import random
+import datetime, time
 
-bot = telebot.TeleBot('6508806550:AAFG0dq4AntPx7_l8kIBzRen4yMKjyCA2K0')
-CHAT_ID = '-1001535245484'
+API_TOKEN = "6508806550:AAGfBQYBoQK51MIVVjv-tjR2zlI36AMTE5c"
+bot = telebot.TeleBot(API_TOKEN)
 
-commands = [
-    telebot.types.BotCommand("start", "запустити бота"),
-    telebot.types.BotCommand("help", "а шо дєлать"),
-    telebot.types.BotCommand("lec", "лекційне посилання"),
-    telebot.types.BotCommand("ml", "машинне навчання"),
-    telebot.types.BotCommand("bzhd", "БЖД"),
-    telebot.types.BotCommand("bzhd_lec", "БЖД лекції"),
-    telebot.types.BotCommand("bd", "бази даних"),
-    telebot.types.BotCommand("ad", "аналіз даних"),
-    telebot.types.BotCommand("ib", "інф. безпека"),
-    telebot.types.BotCommand("eng", "англійська"),
-    telebot.types.BotCommand("mo", "методи оптимізації"),
-    telebot.types.BotCommand("frontend", "Front-end"),
-    telebot.types.BotCommand("rmf", "рівняння мат. фіз."),
-    telebot.types.BotCommand("now", "яка пара зараз"),
-    telebot.types.BotCommand("tomorrow", "розклад на завтра"),
-    telebot.types.BotCommand("today", "розклад на сьогодні"),
-    telebot.types.BotCommand("day", "розклад на потрібний день")
-]
+BASE_API = "https://api.campus.kpi.ua"
+GROUP_ID = "dad22b6e-560d-4f69-8f1b-72ea2710b2fa"
 
-week1 = {
-    "Monday": {
-        "08:30": "Методи оптимізації (лек)",
-        "10:25": "Бази даних (лек)",
-        "12:20": "Основи машинного навчання (лек)"
-    },
-    "Tuesday": {
-        "08:30": "БЖД та цивільний захист (лек)",
-        "10:25": "Практичний курс іноземної мови професійного спрямування (пр)",
-        "12:20": "Front-end розробка (лаб)",
-        "14:15": "Інформаційна безпекам (пр)",
-        "16:10": "Front-end розробка (лек)"
-    },
-    "Wednesday": {
-        "08:30": "",
-        "10:25": "Аналіз даних (лек)",
-        "12:20": "Рівняння математичної фізики (лек)"
-    },
-    "Thursday": {
-        "08:30": "Основи машинного навчання (пр)",
-        "10:25": "",
-        "12:20": "БЖД та цивільний захист (пр)"
-    }
+# Словник з посиланнями на пари
+links_dict = {
+    "Математичне моделювання": "посилання_ММ",
+    "Розподілені і хмарні обчислення": "посилання_РХО",
+    "Інформаційні системи": "посилання_ІС",
+    "Основи економіки": "посилання_ОЕ",
+    "Навчання з підкріпленням": "посилання_НП",
+    "Геометричне моделювання": "посилання_ГМ",
+    "Застосування генеративного ШІ": "посилання_ГШІ"
 }
 
-week2 = {
-    "Monday": {
-        "08:30": "Методи оптимізації (лек)",
-        "10:25": "Бази даних (лек)",
-        "12:20": "Інформаційна безпека (лек)",
-        "14:15": "Методи оптимізації (пр)"
-    },
-    "Tuesday": {
-        "10:25": "Практичний курс іноземної мови професійного спрямування (пр)",
-        "12:20": "Front-end розробка (лаб)",
-        "14:15": "Аналіз даних (пр)"
-    },
-    "Wednesday": {
-        "08:30": "",
-        "10:25": "Аналіз даних (лек)",
-        "12:20": "Рівняння математичної фізики (лек)",
-        "14:15": "Рівняння математичної фізики (пр)",
-        "16:10": "Front-end розробка (лек)"
-    },
-    "Thursday": {
-        "08:30": "Основи машинного навчання (пр)",
-        "10:25": "",
-        "12:20": "",
-        "14:15": "Бази даних (лаб)"
-    }
+# Абревіатури практик/лаб → повна назва пари
+abbrev_to_name = {
+    "мм": "Математичне моделювання",
+    "рхо": "Розподілені і хмарні обчислення",
+    "іс": "Інформаційні системи",
+    "ое": "Основи економіки",
+    "нп": "Навчання з підкріпленням",
+    "гм": "Геометричне моделювання",
+    "гш": "Застосування генеративного ШІ"
 }
 
-START_WEEK_NUMBER = 6
+# Англійські скорочення команд для слешів
+eng_abbrev_to_name = {
+    "mm": "Математичне моделювання",
+    "rhc": "Розподілені і хмарні обчислення",
+    "is": "Інформаційні системи",
+    "oe": "Основи економіки",
+    "np": "Навчання з підкріпленням",
+    "gm": "Геометричне моделювання",
+    "gai": "Застосування генеративного ШІ"
+}
+
+# Створюємо обробник команд для англійських скорочень
+def make_eng_abbrev_handler(key):
+    def handler(message):
+        pair_name = eng_abbrev_to_name[key]
+        link = links_dict.get(pair_name, "посилання")
+        bot.send_message(message.chat.id, f"<b>Посилання на {pair_name}:</b> {link}", parse_mode="HTML")
+    return handler
+
+for key in eng_abbrev_to_name:
+    bot.register_message_handler(make_eng_abbrev_handler(key), commands=[key])
+
+
+
+def get_link_for_pair(pair_name):
+    """Повертає посилання для пари: з links_dict або автоматично, якщо немає"""
+    if pair_name in links_dict:
+        return links_dict[pair_name]
+    words = pair_name.split()
+    abbr = ''.join(word[0].upper() for word in words if word[0].isalpha())
+    return f"посилання_{abbr}" if abbr else "посилання"
+
+def fetch_schedule():
+    url = f"{BASE_API}/schedule/lessons?groupId={GROUP_ID}"
+    resp = requests.get(url)
+    resp.raise_for_status()
+    return resp.json()
 
 def get_week_type():
-    week_number = datetime.datetime.now(timezone).isocalendar()[1]  
-    return 1 if (week_number - START_WEEK_NUMBER) % 2 == 0 else 2
+    week_number = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).isocalendar()[1]
+    return "scheduleFirstWeek" if week_number % 2 != 0 else "scheduleSecondWeek"
 
-end_time = "15:55"
+def parse_schedule_for(day_name):
+    data = fetch_schedule()
+    week_type = get_week_type()
+    week_schedule = data[week_type]
 
-timezone = pytz.timezone("Europe/Kyiv")  # Встановлюємо київський час
+    for day in week_schedule:
+        if day["day"] == day_name:
+            if not day["pairs"]:
+                return "Пар сьогодні немає."
+            text_lines = []
+            for pair in day["pairs"]:
+                time = pair["time"][:5]
+                name = pair["name"]
+                teacher = pair["teacherName"]
+                type_lesson = pair["type"]
+                text_lines.append(f"{time} — {type_lesson} — {name} ({teacher})")
+            return "\n".join(text_lines)
+    return "Розклад на цей день не знайдено."
 
+def format_schedule_text(data_text):
+    """Форматує текст розкладу з виділенням часу та типу заняття"""
+    if "немає" in data_text or "не знайдено" in data_text:
+        return f"<i>{data_text}</i>"
+    text = ""
+    for line in data_text.split("\n"):
+        parts = line.split(" — ")
+        if len(parts) == 3:
+            time, type_lesson, rest = parts
+            text += f"<b>{time}</b> — <i>{type_lesson}</i> — {rest}\n"
+        else:
+            text += f"{line}\n"
+    return text
 
-def get_current_lesson():
-    now = datetime.datetime.now(timezone)
-    print("Поточний час:", now.strftime("%H:%M"))  # Для перевірки часу
-    day = now.strftime("%A")
-    current_time = now.strftime("%H:%M")
-    week = get_week_type()
-    schedule = week1 if week == 1 else week2
-
-    if day in schedule:
-        for lesson_time in sorted(schedule[day].keys()):
-            end_lesson_time = (datetime.datetime.strptime(lesson_time, "%H:%M") + datetime.timedelta(minutes=95)).strftime("%H:%M")
-
-            if lesson_time <= current_time < end_lesson_time:
-                return f"🔔 Зараз: {schedule[day][lesson_time]} ({lesson_time} - {end_lesson_time})"
-    
-    return "📅 Зараз немає занять"
-
-
-def get_schedule_for_day(day):
-    week_type = get_week_type()  # Визначаємо тиждень
-    schedule = week1 if week_type == 1 else week2  # Вибираємо розклад
-    now = datetime.datetime.now(timezone)
-    current_time = now.strftime("%H:%M")  # Оновлюємо час
-
-    if day in schedule:
-        lessons = "\n".join([f"{current_time} - {link}" for current_time, link in schedule[day].items()])
-        return f"📅 Розклад на {day} ({week_type}-й тиждень):\n{lessons}"
-    return f"❌ Немає розкладу на цей день"
-
-
-# 📌 Обробник команди /now (що зараз?)
-@bot.message_handler(commands=['now'])
-def now_handler(message):
-    bot.send_message(message.chat.id, get_current_lesson())
-
-bot.set_my_commands(commands)
-
-# 📌 Обробник команди /today (розклад на сьогодні)
 @bot.message_handler(commands=['today'])
 def today_handler(message):
-    today = datetime.datetime.now(timezone).strftime("%A")  # Поточний день
-    bot.send_message(message.chat.id, get_schedule_for_day(today))
+    day_index = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).weekday()
+    day_api_list = ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"]
+    day_api = day_api_list[day_index]
 
-# 📌 Обробник команди /tomorrow (розклад на завтра)
+    week_number = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).isocalendar()[1]
+    week_type_text = "Парний" if week_number % 2 == 0 else "Непарний"
+    day_name_full = ["Понеділок","Вівторок","Середа","Четвер","П’ятниця","Субота","Неділя"][day_index]
+
+    data_text = parse_schedule_for(day_api)
+    text = f"<b>Сьогодні: {day_name_full}</b> ({week_type_text} тиждень)\n\n"
+    text += format_schedule_text(data_text)
+
+    bot.send_message(message.chat.id, text, parse_mode="HTML")
+
 @bot.message_handler(commands=['tomorrow'])
 def tomorrow_handler(message):
-    today = datetime.datetime.now(timezone).strftime("%A")  # Поточний день
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    tomorrow_index = (days.index(today) + 1) % 7  # Наступний день
-    bot.send_message(message.chat.id, get_schedule_for_day(days[tomorrow_index]))
+    day_index = (datetime.datetime.now(pytz.timezone("Europe/Kyiv")).weekday() + 1) % 7
+    day_api_list = ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"]
+    day_api = day_api_list[day_index]
 
-# 📌 Обробник команди /day (розклад на будь-який день)
-@bot.message_handler(commands=['day'])
-def day_handler(message):
-    text = message.text.split()
-    if len(text) > 1:
-        day = text[1].capitalize()  # Приводимо до формату (Monday, Tuesday)
-        bot.send_message(message.chat.id, get_schedule_for_day(day))
-    else:
-        bot.send_message(message.chat.id, "❓ Введи день: /day Monday")
+    week_number = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).isocalendar()[1]
+    if day_index == 0:
+        week_number += 1
+    week_type_text = "Парний" if week_number % 2 == 0 else "Непарний"
+    day_name_full = ["Понеділок","Вівторок","Середа","Четвер","П’ятниця","Субота","Неділя"][day_index]
 
-@bot.message_handler(commands=['start'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "Хай біч, шукаєш розклад?")
+    data_text = parse_schedule_for(day_api)
+    text = f"<b>Завтра: {day_name_full}</b> ({week_type_text} тиждень)\n\n"
+    text += format_schedule_text(data_text)
 
-@bot.message_handler(commands=['help'])
-def help_handler(message):
-    bot.send_message(message.chat.id, "Напиши <b><i>/предмет</i></b> і я кину посилання: \n" 
-                     "/lec - лекційне посилання\n"
-                     "/ml - машинне навчання\n"
-                     "/bzhd - БЖД\n"
-                     "/bzhd_lec - БЖД лекції\n"
-                     "/bd - бази даних\n"
-                     "/ad - аналіз даних\n"
-                     "/ib - інф. безпека\n"
-                     "/eng - англійська\n"
-                     "/mo - методи оптимізації\n"
-                     "/frontend - Front-end\n"
-                     "/rmf - рівняння мат. фіз.\n"
-                     "/now - яка пара зараз\n"
-                     "/today - розклад на сьогодні\n"
-                     "/tomorrow - розклад на завтра\n"
-                     "Або напиши <b><i>/day_день-тижня</i></b> (тіпа '/day Monday') і я кину розклад. Все просто 💁", parse_mode="HTML")
+    bot.send_message(message.chat.id, text, parse_mode="HTML")
 
-@bot.message_handler(commands=['tavrov'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "Тавров підарас")
+@bot.message_handler(commands=['week'])
+def week_handler(message):
+    data = fetch_schedule()
+    week_type = get_week_type()
+    week_schedule = data[week_type]
+    week_number = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).isocalendar()[1]
+    week_type_text = "Парний" if week_number % 2 == 0 else "Непарний"
 
-@bot.message_handler(commands=['lec', 'лекція'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Лекційне посилання</b> \nhttps://us02web.zoom.us/j/9189174549?pwd=bTNWY1BnVkFLRFViTXVjbUUwTVFUQT09", parse_mode="HTML") 
+    text = f"<b>Розклад на {week_type_text} тиждень:</b>\n\n"
+    day_name_full_list = ["Понеділок","Вівторок","Середа","Четвер","П’ятниця","Субота","Неділя"]
 
-@bot.message_handler(commands=['ml', 'мл'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Основи машинного навчання</b> \nhttps://us06web.zoom.us/j/82625902531?pwd=xP6ogdCLRxzVoQkm1AT61Dma7rmZZI.1", parse_mode="HTML") 
+    for idx, day in enumerate(week_schedule):
+        day_name_full = day_name_full_list[idx]
+        text += f"<b>{day_name_full}:</b>\n"
+        if not day["pairs"]:
+            text += "  <i>Пар немає.</i>\n"
+        else:
+            for pair in day["pairs"]:
+                time = pair["time"][:5]
+                name = pair["name"]
+                teacher = pair["teacherName"]
+                type_lesson = pair["type"]
+                text += f"  <b>{time}</b> — <i>{type_lesson}</i> — {name} ({teacher})\n"
+        text += "\n"
 
-@bot.message_handler(commands=['bzhd', 'бжд'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>БЖД</b> \nhttps://us04web.zoom.us/j/75247526367?pwd=TFZoc0Z3bkpTb0Q0cmVXeXUrM0RjUT09", parse_mode="HTML") 
+    bot.send_message(message.chat.id, text, parse_mode="HTML")
 
-@bot.message_handler(commands=['bzhd_lec', 'бжд_лек'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>БЖД лекції</b> \nhttps://us02web.zoom.us/j/8787295500?pwd=QVFyU2JOM2xGcHNMOTArZDlJeXZmZz09", parse_mode="HTML") 
+def get_today_schedule_with_time():
+    day_index = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).weekday()
+    day_api_list = ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"]
+    day_api = day_api_list[day_index]
 
-@bot.message_handler(commands=['bd', 'бд'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Бази даних</b> \nhttps://us06web.zoom.us/j/82625902531?pwd=xP6ogdCLRxzVoQkm1AT61Dma7rmZZI.1", parse_mode="HTML")
+    data = fetch_schedule()
+    week_type = get_week_type()
+    week_schedule = data[week_type]
 
-@bot.message_handler(commands=['ad', 'ад'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Аналіз даних</b> \nhttps://us05web.zoom.us/j/3591803845?pwd=QjZoc2N2ZTV3NVZ0cjdJZjFVS0hWUT09", parse_mode="HTML") 
+    for day in week_schedule:
+        if day["day"] == day_api:
+            pairs_list = []
+            for pair in day["pairs"]:
+                start_time = datetime.datetime.strptime(pair["time"][:5], "%H:%M").time()
+                end_dt = (datetime.datetime.combine(datetime.date.today(), start_time) + datetime.timedelta(minutes=90))
+                end_time = end_dt.time()
+                link = pair["name"]
+                pairs_list.append({
+                    "name": pair["name"],
+                    "teacher": pair["teacherName"],
+                    "type": pair["type"],
+                    "start": start_time,
+                    "end": end_time,
+                    "link": link
+                })
+            return pairs_list
+    return []
 
-@bot.message_handler(commands=['ib', 'іб'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Інформаційна безпека</b> \nhttps://us04web.zoom.us/j/2045916957?pwd=RUxNcVlSVlJuUFBzUklXZDduWTNWZz09", parse_mode="HTML")
+@bot.message_handler(commands=['now'])
+def now_handler(message):
+    now = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).time()
+    pairs = get_today_schedule_with_time()
 
-@bot.message_handler(commands=['eng', 'англ'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Англійська мова</b> \nhttps://us04web.zoom.us/j/77395391258?pwd=MGiaK3k0fUSkvJE2dTPqRoVP8bcNma.1", parse_mode="HTML") 
+    for pair in pairs:
+        if pair["start"] <= now <= pair["end"]:
+            link = get_link_for_pair(pair["name"])
+            text = (
+                f"<b>Зараз йде пара:</b>\n"
+                f"<i>{pair['type']}</i> — <b>{pair['name']}</b> ({pair['teacher']})\n"
+                f"<u>Посилання:</u> {link}"
+            )
+            bot.send_message(message.chat.id, text, parse_mode="HTML")
+            return
 
-@bot.message_handler(commands=['mo', 'мо'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Методи оптимізації</b> \n\nhttps://us02web.zoom.us/j/9189174549?pwd=bTNWY1BnVkFLRFViTXVjbUUwTVFUQT09", parse_mode="HTML") 
+    bot.send_message(message.chat.id, "<i>Зараз пари немає.</i>", parse_mode="HTML")
 
-@bot.message_handler(commands=['frontend', 'фронтенд'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Front-end розробка</b> \n\nНема ще. \nВ тебе є? Ділись (скажи @lettucejunior)", parse_mode="HTML") 
+@bot.message_handler(commands=['next'])
+def next_handler(message):
+    now = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).time()
+    pairs = get_today_schedule_with_time()
 
-@bot.message_handler(commands=['rmf', 'рмф'])
-def start_handler(message):
-    bot.send_message(message.chat.id, "<b>Рівняння мат. фізики</b> \n\nНема ще. \nВ тебе є? Ділись (скажи @lettucejunior)", parse_mode="HTML") 
+    for pair in pairs:
+        if now < pair["start"]:
+            link = get_link_for_pair(pair["name"])
+            text = (
+                f"<b>Наступна пара:</b>\n"
+                f"<i>{pair['type']}</i> — <b>{pair['name']}</b> ({pair['teacher']})\n"
+                f"<u>Посилання:</u> {link}"
+            )
+            bot.send_message(message.chat.id, text, parse_mode="HTML")
+            return
 
+    bot.send_message(message.chat.id, "<i>На сьогодні більше пар немає.</i>", parse_mode="HTML")
+    
+@bot.message_handler(commands=['weektype'])
+def weektype_handler(message):
+    week_number = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).isocalendar()[1]
+    week_text = "2 тиждень" if week_number % 2 == 0 else "1 тиждень"
+    bot.send_message(message.chat.id, f"<b>Зараз {week_text}.</b>", parse_mode="HTML")
+
+
+# --- Обробка абревіатур ---
+# Українські без слеша
+@bot.message_handler(func=lambda message: message.text.lower() in abbrev_to_name)
+def abbrev_handler_plain(message):
+    key = message.text.lower()
+    pair_name = abbrev_to_name[key]
+    link = links_dict.get(pair_name, "посилання")
+    bot.send_message(message.chat.id, f"<b>Посилання на {pair_name}:</b> {link}", parse_mode="HTML")
+
+# Англійські через слеш
+def handle_abbrev_command(message, key):
+    pair_name = abbrev_to_name[key]
+    link = links_dict.get(pair_name, "посилання")
+    bot.send_message(message.chat.id, f"<b>Посилання на {pair_name}:</b> {link}", parse_mode="HTML")
+
+for key in abbrev_to_name:
+    bot.register_message_handler(
+        lambda message, k=key: handle_abbrev_command(message, k),
+        commands=[key]
+    )
+
+
+# Зберігатимемо дату останнього використання для кожного користувача
+last_random_use = {}  # ключ = user_id, значення = date у форматі YYYY-MM-DD
+
+student_gifts = [
+    "Ти підключився. Вітаю",
+    "Мікрофон вимкнений. Спокійно",
+    "Камера вимкнена. Можеш відпочити",
+    "Знову дивишся меми. Молодець",
+    "Домашка? Забудь про неї",
+    "Кава врятує день",
+    "Zoom завис. Ти в безпеці",
+    "Викладач забув лекцію. Щастя",
+    "Можеш відкривати соцмережі",
+    "Лекція нудна. Засинай",
+    "Ти ще живий? Вітаю",
+    "Пес кращий студент ніж ти",
+    "Заснув? Стратегія спрацювала",
+    "Камеру включати необов’язково",
+    "Мозок відпочиває. Все норм",
+    "Мем під час лекції? Ідея",
+    "Активний у чаті? Ніхто не дивиться",
+    "Твій день = виживання онлайн",
+    "Лінь сьогодні твій друг",
+    "Викладач забув домашку. Щастя",
+    "Можеш пропустити частину лекції",
+    "Кава + Wi-Fi = твоє життя",
+    "Викладач говорить швидко. Ігноруй",
+    "Ти підключився. Уже добре",
+    "Сьогодні лекція = тест терпіння",
+    "Можеш закрити вкладку. Безпечно",
+    "Лекція нудна. Насолоджуйся",
+    "Викладач не помітить твоєї апатії",
+    "Ти прокрастинуєш правильно",
+    "Мозок протестує. Вітаю",
+    "Сьогодні ти герой. Просто підключився",
+    "Твій день = мемофон",
+    "Смійся тихо. Ніхто не почує",
+    "Заснув? Це стратегія",
+    "Ти онлайн. Це перемога",
+    "Викладач забув питання. Щастя",
+    "Можеш робити вигляд, що слухаєш",
+    "Кава сильніша за оцінку",
+    "Ти вижив після Zoom. Молодець",
+    "Лекція коротка. Насолоджуйся",
+    "Мем під час лекції = виживання",
+    "Ти ледар? Чудово",
+    "Викладач говорить. Ти ігноруєш",
+    "Твоя лінь = суперсила",
+    "Камера вимкнена. Робиш що хочеш",
+    "Твій ноутбук головний союзник",
+    "Ти ще тут? Вітаю",
+    "Домашка втекла. Ти ні",
+    "Лекція = онлайн-арена терпіння",
+    "Викладач говорить без сенсу",
+    "Сьогодні можна нічого не робити",
+    "Твоя кава розумніша за тебе"
+]
+
+@bot.message_handler(commands=['random'])
+def random_handler(message):
+    user_id = message.from_user.id
+    today_str = datetime.datetime.now(pytz.timezone("Europe/Kyiv")).strftime("%Y-%m-%d")
+
+    if last_random_use.get(user_id) == today_str:
+        bot.send_message(message.chat.id, "🎲 Ти вже отримав своє щоденне передбачення. Повернися завтра!")
+        return
+
+    chosen = random.choice(student_gifts)
+    bot.send_message(message.chat.id, f"🎲 <b>Твоє передбачення на сьогодні:</b>\n\n<i>{chosen}</i>", parse_mode="HTML")
+
+    # Запам'ятовуємо, що користувач отримав сьогодні
+    last_random_use[user_id] = today_str
+
+
+@bot.message_handler(commands=['coin'])
+def coin_handler(message):
+    # Можливі варіанти і саркастичні коментарі
+    outcomes = [
+        ("Йти на пару", "Хехе, лох"),
+        ("Не йти на пару", "Повезло, повезло"),
+        ("Йти на пару", "Сміливо, але дурнувато"),
+        ("Не йти на пару", "Тільки не кажи викладачу"),
+        ("Йти на пару", "Ну, хай буде так"),
+        ("Не йти на пару", "Свобода за тобою"),
+        ("Йти на пару", "Ще один герой Zoom"),
+        ("Не йти на пару", "Час для мемів")
+    ]
+
+     # Перше повідомлення
+    bot.send_message(message.chat.id, "🪙 Підкидання монетки...")
+
+    # Затримка 2 секунди
+    time.sleep(2)
+
+    # Вибір результату
+    decision, comment = random.choice(outcomes)
+
+    # Друге повідомлення з результатом
+    bot.send_message(
+        message.chat.id,
+        f"<b>Результат:</b> {decision}\n\n<i>{comment}</i>",
+        parse_mode="HTML"
+    )
+
+
+print("Бот запущено...")
 bot.infinity_polling()
+
+
